@@ -62,11 +62,20 @@ function runForm(all, meta, preselectVid) {
     const cols = (v?.schema_json || []).map((c) => c.name);
     targetSel.value = cols.includes(prev) ? prev : cols[cols.length - 1] || "";
   };
+  // Match the task to the target's dtype (float → regression, text/bool → classification); ints keep the user's choice.
+  const suggestTask = () => {
+    const col = (versions.find((x) => x.id === +vSel.value)?.schema_json || []).find((c) => c.name === targetSel.value);
+    const want = !col ? null : col.dtype.startsWith("float") ? "regression"
+      : /^(object|bool|category|string)/.test(col.dtype) ? "classification" : null;
+    if (want && want !== taskSel.value) { taskSel.value = want; fillAlgos(); }
+  };
   taskSel.addEventListener("change", fillAlgos);
   algoSel.addEventListener("change", fillHyperparams);
-  vSel.addEventListener("change", fillTargets);
+  targetSel.addEventListener("change", suggestTask);
+  vSel.addEventListener("change", () => { fillTargets(); suggestTask(); });
   fillAlgos();
   fillTargets();
+  suggestTask();
 
   const form = h("form", { class: "card" },
     h("div", { class: "card-head" }, h("h2", {}, "New run")),
